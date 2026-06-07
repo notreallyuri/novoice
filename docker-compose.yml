@@ -1,0 +1,45 @@
+services:
+  redis_sessions:
+    image: redis:alpine
+    container_name: novoice-redis_sessions
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+  redis_ephemeral:
+    image: redis:alpine
+    container_name: novoice-redis_ephemeral
+    ports:
+      - "6381:6379"
+  db:
+    image: postgres:16-alpine
+    container_name: novoice-project_db
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: novoice
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  scylla:
+    image: scylladb/scylla
+    container_name: novoice-scylla
+    ports:
+      - "9042:9042"
+    volumes:
+      - scylla_data:/var/lib/scylla
+      - ./db/scylla/init.cql:/init.cql
+    command: --developer-mode=1 --smp=1 --memory=1024M
+    healthcheck:
+      test: ["CMD-SHELL", "nodetool status | grep UN"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+volumes:
+  redis_data:
+  postgres_data:
+  scylla_data:

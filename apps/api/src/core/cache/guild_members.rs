@@ -4,11 +4,13 @@ use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QuerySelect};
 use shared::data::{GuildId, UserId};
 use uuid::Uuid;
 
+const KEY: &str = "guild_members";
+
 pub async fn get_cached_guild_members(
     state: &SharedState,
     guild_id: GuildId,
 ) -> Result<Vec<UserId>, AppError> {
-    let cache_key = format!("guild_members:{}", guild_id.0);
+    let cache_key = format!("{}:{}", KEY, guild_id.0);
 
     let mut conn = state.redis.cache.get().await?;
 
@@ -54,4 +56,19 @@ pub async fn get_cached_guild_members(
     let users: Vec<UserId> = db_members.into_iter().map(UserId).collect();
 
     Ok(users)
+}
+
+pub async fn cache_remove_member(state: &SharedState, guild_id: GuildId, user_id: UserId) {
+    let mut conn = match state.redis.cache.get().await {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+
+    let cache_key = format!("{}:{}", KEY, guild_id.0);
+
+    let _: Result<(), _> = deadpool_redis::redis::cmd("SREM")
+        .arg(&cache_key)
+        .arg(user_id.0.to_string())
+        .query_async(&mut conn)
+        .await;
 }

@@ -36,8 +36,7 @@ pub async fn get(
 
 pub async fn edit(
     State(state): State<SharedState>,
-    Path(channel_id): Path<ChannelId>,
-    Path(id): Path<MessageId>,
+    Path((channel_id, id)): Path<(ChannelId, MessageId)>,
     auth: AuthContext,
     Json(body): Json<MessageEditRequest>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -48,8 +47,7 @@ pub async fn edit(
 
 pub async fn delete(
     State(state): State<SharedState>,
-    Path(channel_id): Path<ChannelId>,
-    Path(id): Path<MessageId>,
+    Path((channel_id, id)): Path<(ChannelId, MessageId)>,
     auth: AuthContext,
 ) -> Result<impl IntoResponse, AppError> {
     super::services::delete::delete(&state, channel_id, id, auth.user_id).await?;
@@ -59,8 +57,7 @@ pub async fn delete(
 
 pub async fn pin(
     State(state): State<SharedState>,
-    Path(channel_id): Path<ChannelId>,
-    Path(id): Path<MessageId>,
+    Path((channel_id, id)): Path<(ChannelId, MessageId)>,
     auth: AuthContext,
     Json(body): Json<MessagePinRequest>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -71,8 +68,7 @@ pub async fn pin(
 
 pub async fn unpin(
     State(state): State<SharedState>,
-    Path(channel_id): Path<ChannelId>,
-    Path(id): Path<MessageId>,
+    Path((channel_id, id)): Path<(ChannelId, MessageId)>,
 ) -> Result<impl IntoResponse, AppError> {
     super::services::pin::unpin(&state, channel_id, id).await?;
 

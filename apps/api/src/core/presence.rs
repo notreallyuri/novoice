@@ -1,5 +1,8 @@
 use deadpool_redis::Pool;
-use shared::data::user::{Status, UserPresence};
+use shared::data::{
+    UserId,
+    user::{Status, UserPresence},
+};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -68,9 +71,9 @@ pub async fn get_bulk(
 
     let mut presence_map = HashMap::new();
 
-    for (id, res) in user_ids.iter().zip(results.into_iter()) {
+    for (id, res) in user_ids.iter().zip(results) {
         let presence = if let Some(json_str) = res {
-            serde_json::from_str(&json_str).unwrap_or_else(|_| UserPresence {
+            serde_json::from_str(&json_str).unwrap_or(UserPresence {
                 status: Status::Offline,
                 preset: None,
             })
@@ -85,4 +88,27 @@ pub async fn get_bulk(
     }
 
     Ok(presence_map)
+}
+
+pub async fn refresh_presence(pool: &Pool, user_id: &UserId) -> Result<(), AppError> {
+    let mut conn = pool.get().await?;
+
+    let _: () = deadpool_redis::redis::cmd("EXPIRE")
+        .arg(format!("presence:{}", user_id.0))
+        .arg(60)
+        .query_async(&mut conn)
+        .await?;
+
+    Ok(())
+}
+
+pub async fn delete_presence(pool: &Pool, user_id: &UserId) -> Result<(), AppError> {
+    let mut conn = pool.get().await?;
+
+    let _: () = deadpool_redis::redis::cmd("DEL")
+        .arg(format!("{}{}", PRESENCE_PREFIX, user_id))
+        .query_async(&mut conn)
+        .await?;
+
+    Ok(())
 }

@@ -1,4 +1,5 @@
 use crate::data::{
+    channel::prelude::DMChannel,
     relationship::UserRelationship,
     user::{User, UserPublic},
 };
@@ -11,4 +12,5 @@ pub enum UserServerEvents {
     IdentityValidated { user: Box<User> },
     PresenceUpdate { user: Box<UserPublic> },
     RelationshipUpdate { relationship: Box<UserRelationship> },
+    DirectMessageCreated { channel: Box<DMChannel> },
 }

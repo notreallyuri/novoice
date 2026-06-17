@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::core::{
     error::AppError,
     mappers::{FromDomain, IntoDomain},
@@ -8,7 +6,8 @@ use crate::core::{
 };
 use entity::{
     category, category_override, channel, channel_override, guild, guild_member, guild_member_role,
-    relationship, role, user,
+    relationship::{self, DbRelationshipStatus},
+    role, user,
 };
 use sea_orm::{ColumnTrait, Condition, EntityTrait, ModelTrait, QueryFilter};
 use shared::{
@@ -22,6 +21,7 @@ use shared::{
     },
     dtos::user::GetMeResponse,
 };
+use std::collections::HashMap;
 use uuid::Uuid;
 
 pub async fn get_me(state: &SharedState, user_id: UserId) -> Result<GetMeResponse, AppError> {
@@ -123,6 +123,10 @@ pub async fn get_me(state: &SharedState, user_id: UserId) -> Result<GetMeRespons
     let relationships = relationships_res
         .into_iter()
         .filter_map(|rel| {
+            if rel.target_id == user_id.0 && rel.status == DbRelationshipStatus::Blocked {
+                return None;
+            }
+
             let target_id = if rel.user_id == user_id.0 {
                 rel.target_id
             } else {

@@ -1,5 +1,6 @@
 pub mod canvas_channel;
 pub mod category;
+pub mod dm_channel;
 pub mod docs_channel;
 pub mod message;
 pub mod text_channel;
@@ -24,6 +25,7 @@ pub mod prelude {
     pub use super::Channel;
     pub use super::canvas_channel::*;
     pub use super::category::*;
+    pub use super::dm_channel::*;
     pub use super::docs_channel::*;
     pub use super::message::*;
     pub use super::text_channel::*;

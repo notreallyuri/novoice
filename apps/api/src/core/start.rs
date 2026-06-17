@@ -1,6 +1,6 @@
+use super::error::AppError;
 use crate::features::ws;
 
-use super::error::AppError;
 use axum::{Router, routing::get};
 use axum_client_ip::ClientIpSource;
 use std::net::SocketAddr;
@@ -14,6 +14,7 @@ pub async fn start() -> Result<(), AppError> {
     let state = std::sync::Arc::new(super::state::AppState::load().await?);
 
     ws::listener::redis_listener(state.clone()).await;
+    super::workers::start_daily_sweeper(state.clone()).await;
 
     let app = Router::new()
         .route("/ws", get(ws::handler::ws_handler))

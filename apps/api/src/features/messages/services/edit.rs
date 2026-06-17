@@ -1,4 +1,6 @@
-use crate::core::{broadcast, error::AppError, state::SharedState};
+use crate::core::{
+    broadcast, error::AppError, state::SharedState, statements::get_bucket_from_uuidv7,
+};
 use scylla::value::CqlTimestamp;
 use sea_orm::EntityTrait;
 use shared::{
@@ -20,13 +22,14 @@ pub async fn edit(
         .ok_or(AppError::NotFound)?;
 
     let now = chrono::Utc::now();
+    let bucket = get_bucket_from_uuidv7(message_id.0);
 
     let res = state
         .scylla
         .session
         .execute_unpaged(
             &state.scylla.statements.select_message_for_edit,
-            (channel_id.0, message_id.0),
+            (channel_id.0, bucket, message_id.0),
         )
         .await?
         .into_rows_result()?;
@@ -51,6 +54,7 @@ pub async fn edit(
                 content.clone(),
                 CqlTimestamp(now.timestamp_millis()),
                 channel_id.0,
+                bucket,
                 message_id.0,
             ),
         )
@@ -58,7 +62,7 @@ pub async fn edit(
 
     let message = Message {
         id: message_id,
-        channel_id: channel_id.clone(),
+        channel_id,
         author_id,
         content,
         created_at: chrono::DateTime::from_timestamp_millis(created_at.0).unwrap_or_default(),

@@ -2,56 +2,113 @@
 
 ## Phase 1: The Contextual Guild (REST Engine)
 
-This phase locks down your Role-Based Access Control (RBAC) so the client only
-ever receives sanitized data they are explicitly allowed to see.
+*This phase locks down your Role-Based Access Control (RBAC) so the client only
+ever receives sanitized data they are explicitly allowed to see.*
 
-- [x] Implement get_guild Service: Fetch the base guild profile and all associated
-categories and channels concurrently.
-- [x] Calculate Base Permissions: Fetch the requesting user's GuildMember record
-and compute their base permissions from their assigned roles.
-- [x] Fetch Overrides: Query both category_overrides and channel_overrides for
-the specific guild.
-- [x] Apply the Bitwise Math: Route the base permissions through the
-apply_override logic for each category and channel.
-- [x] Filter the Payload: Strip out any channels where the resulting permission
-mask lacks Permissions::VIEW_CHANNEL before returning the DTO.
+- [x] Implement `get_guild` Service
+- [x] Calculate Base Permissions
+- [x] Fetch Overrides
+- [x] Apply the Bitwise Math
+- [x] Filter the Payload
 
 ## Phase 2: Access & Onboarding (REST Flow)
 
-Before WebSockets can be useful, users need a way to populate their UI by
-interacting with others and joining servers.
+*Before WebSockets can be useful, users need a way to populate their UI by
+interacting with others and joining servers.*
 
-- [x] Create Invite Endpoint (POST /guilds/{id}/invites): Generate short-lived or
-limited-use UUID invite codes.
-- [] Join Guild Endpoint (POST /invites/{code}): Validate the invite, insert a
-new guild_members record, and automatically assign the default @everyone role link.
-- [] Leave Guild Endpoint (DELETE /guilds/{id}/members/@me): Allow users to exit
-a server, handling cascading deletes cleanly.
+- [x] Create Invite Endpoint (`POST /guilds/{id}/invite`)
+- [x] Join Guild Endpoint (`POST /users/@me/g/join`)
+- [x] Leave Guild Endpoint (`DELETE /guilds/{id}/members/@me`)
 
 ## Phase 3: The Real-Time Gateway (WebSocket Auth)
 
-This is where we safely bridge the stateless HTTP world with the stateful TCP
-world, avoiding browser-based WebSocket header limitations.
+*Bridging the stateless HTTP world with the stateful TCP world.*
 
-- [] Ticket Generation (POST /auth/ticket): Create a secure, short-lived
-(e.g., 30-second) token stored in Redis specifically for WebSocket upgrades.
-- [] Axum Upgrade Route: Build the HTTP-to-WebSocket protocol upgrade handler in
-apps/api/src/features/ws/listener.rs.
-- [] The Identify Handshake: Require the client to send their short-lived ticket
-as the first WebSocket frame.
-- [] Session Management: Validate the ticket, map the active socket to the UserId
-in the global DashMap, and disconnect unauthenticated peers.
-- [] The Bootstrap Push: Upon successful identification, immediately fire the
-UserServerEvents::InitialState payload (reusing the optimized get_me logic) down
-the wire.
+- [x] Ticket Generation (`POST /auth/ticket`)
+- [x] Axum Upgrade Route (`ws/handler.rs`)
+- [x] The Identify Handshake
+- [x] Session Management via `DashMap`
+- [x] The Bootstrap Push (`Ready` & `PresenceUpdate` events)
 
 ## Phase 4: Real-Time Routing (Redis Pub/Sub)
 
-With authenticated sockets open, we route the background Redis events directly
-into the user's active connection.
+*Routing background events directly into the user's active connection.*
 
-- [] Wire the Redis Listener: Update the background thread in ws/listener.rs to
-look up active UserId connections in the DashMap and forward incoming channel:*,
-guild:*, and user:* events.
-- [] Presence Lifecycle: Emit Online status when a socket connects, and
-automatically broadcast Offline when the socket drops or the heartbeat times out.
+- [x] Wire the Redis Listener (`ws/listener.rs`)
+- [x] Presence Lifecycle (Online/Offline broadcasts)
+- [x] 30-Second Heartbeat Engine
+
+## Phase 5: The SFU Media Engine (WebRTC)
+
+*The custom Selective Forwarding Unit for Voice Channels.*
+
+- [x] Media Engine Initialization & Opus Codec Registration
+- [x] SDP Offer/Answer Negotiation Switchboard
+- [x] Interactive Connectivity Establishment (ICE) Traversal
+- [x] Lock-Free `VoiceRoom` isolation using `DashMap`
+- [x] RTP Packet Router (Microphone to Virtual Speakers)
+- [x] Zombie Connection & Memory Leak Cleanup
+
+## Phase 6: Distributed Messaging (ScyllaDB)
+
+*High-throughput, highly available message storage.*
+
+- [x] YYYYMM Time-Bucket Partitioning strategy
+- [x] `thread_messages` Materialized Views (Eliminated `ALLOW FILTERING`)
+- [x] Cross-bucket Pagination Engine
+- [x] Soft Deletion & Message Editing
+
+---
+
+## Phase 7: Direct Messaging (DMs)
+
+*Expanding the channel architecture to support private 1-on-1 conversations.*
+
+- [x] Create DM Channel initialization endpoints (`POST /users/@me/channels`).
+- [x] Implement DM list fetching and caching.
+- [x] Route the existing WebRTC `JoinVoice` logic to seamlessly handle DM Call states.
+
+## Phase 8: Server Administration (Audit & Webhooks)
+
+*Advanced guild management capabilities.*
+
+- [ ] Create an `audit_logs` table in PostgreSQL to track administrative actions.
+- [ ] Implement middleware/hooks on destructive endpoints
+(Kick, Ban, Delete Channel) to write to the audit log.
+- [ ] Build the Webhook execution engine for external integrations.
+
+## Phase 9: The Native Client (Front End)
+
+*Building the cross-platform desktop client to consume the Axum/Scylla backend.*
+
+- [ ] **Core Setup & IPC:**
+  - [ ] Initialize Tauri application shell.
+  - [ ] Configure strict Content Security Policies (CSP) for WebRTC and WebSocket
+  connections.
+- [ ] **Design System & UI Architecture:**
+  - [ ] Establish global CSS variables/themes (System/Dark/Light).
+  - [ ] Implement a strict, squared-off component library
+  (enforcing `border-radius: 0` across all containers, modals, and buttons).
+  - [ ] Build the layout shell
+  (Server Sidebar, Channel List, Main Content Area, Member List).
+- [ ] **State Management & Networking:**
+  - [ ] Build the WebSocket hook/store to handle the `Identify` handshake using
+  the short-lived ticket.
+  - [ ] Implement presence tracking (Online/Offline) and the 30-second
+  heartbeat loop.
+  - [ ] Create the WebRTC state machine to manage `RTCPeerConnection`, catch
+  incoming audio tracks, and handle SDP/ICE signaling via the WS switchboard.
+- [ ] **Core Views:**
+  - [ ] Authentication (Login/Register/Recovery).
+  - [ ] Guild View (Real-time chat scrolling with ScyllaDB pagination).
+  - [ ] Direct Message Hub.
+  - [ ] Active Voice Room overlay (showing speaking indicators based on audio levels).
+
+## Phase 10: Asset Storage & Media Pipeline
+
+*Handling user uploads, avatars, and message attachments via Cloudflare R2.*
+
+- [ ] Implement Pre-Signed URL generation for direct-to-S3 client uploads.
+- [ ] Create `features/storage` endpoints to finalize and link uploaded assets to
+User Profiles.
+- [ ] Add attachment metadata arrays to the ScyllaDB `messages` table schema.

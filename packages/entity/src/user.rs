@@ -29,6 +29,8 @@ pub enum Relation {
     Guild,
     #[sea_orm(has_many = "super::presence_preset::Entity")]
     PresencePresets,
+    #[sea_orm(has_many = "super::dm_channel_member::Entity")]
+    DmChannelMember,
 }
 
 impl Related<super::user_settings::Entity> for Entity {
@@ -58,6 +60,12 @@ impl Related<super::guild::Entity> for Entity {
 impl Related<super::presence_preset::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::PresencePresets.def()
+    }
+}
+
+impl Related<super::dm_channel_member::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::DmChannelMember.def()
     }
 }
 

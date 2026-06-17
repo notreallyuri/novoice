@@ -32,7 +32,9 @@ pub async fn redis_listener(state: SharedState) {
             return;
         }
 
-        tracing::info!("Redis listener successfully subscribed to 'channel:*'");
+        tracing::info!(
+            "Redis listener successfully subscribed to 'channel:*', 'guild:*' & 'user:*'"
+        );
 
         let mut message_stream = pubsub.on_message();
 

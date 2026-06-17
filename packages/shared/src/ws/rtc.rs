@@ -1,36 +1,22 @@
-use crate::data::UserId;
+use crate::data::{ChannelId, UserId};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "event")]
 pub enum RtcClientEvents {
-    SdpOffer {
-        target_user_id: UserId,
-        sdp: String,
-    },
-    SdpAnswer {
-        target_user_id: UserId,
-        sdp: String,
-    },
-    IceCandidate {
-        target_user_id: UserId,
-        candidate: String,
-    },
+    JoinVoice { channel_id: ChannelId },
+    LeaveVoice,
+    SdpOffer { sdp: String },
+    SdpAnswer { sdp: String },
+    IceCandidate { candidate: String },
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "event")]
 pub enum RtcServerEvents {
-    SdpOffer {
-        from_user_id: UserId,
-        sdp: String,
-    },
-    SdpAnswer {
-        from_user_id: UserId,
-        sdp: String,
-    },
-    IceCandidate {
-        from_user_id: UserId,
-        candidate: String,
-    },
+    SdpOffer { sdp: String },
+    SdpAnswer { sdp: String },
+    IceCandidate { candidate: String },
+    UserJoinedVoice { user_id: UserId },
+    UserLeftVoice { user_id: UserId },
 }

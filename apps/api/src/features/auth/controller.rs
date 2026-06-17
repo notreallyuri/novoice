@@ -34,3 +34,14 @@ pub async fn logout(
 
     Ok(Json(ApiResponse::success(())))
 }
+
+pub async fn ticket(
+    State(state): State<SharedState>,
+    auth: AuthContext,
+) -> Result<impl IntoResponse, AppError> {
+    let ticket_token = services::ticket::generate_ticket(&state, auth.user_id).await?;
+
+    Ok(Json(ApiResponse::success(serde_json::json!({
+        "ticket": ticket_token
+    }))))
+}

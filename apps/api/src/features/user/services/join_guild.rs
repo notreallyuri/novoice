@@ -1,9 +1,8 @@
-use entity::{guild_member, guild_member_role, invite, role};
+use crate::core::{error::AppError, state::SharedState};
+use entity::{guild_ban, guild_member, guild_member_role, invite, role};
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set, TransactionTrait};
 use shared::{data::UserId, dtos::user::JoinGuildRequest};
 use uuid::Uuid;
-
-use crate::core::{error::AppError, state::SharedState};
 
 pub async fn join_guild(
     state: SharedState,
@@ -41,6 +40,28 @@ pub async fn join_guild(
         return Err(AppError::Conflict(
             "You are already a member of this server".to_string(),
         ));
+    }
+
+    let existing_ban = guild_ban::Entity::find()
+        .filter(guild_ban::Column::GuildId.eq(invite.guild_id))
+        .filter(guild_ban::Column::UserId.eq(user_id.0))
+        .one(&txn)
+        .await?;
+
+    if let Some(ban) = existing_ban {
+        if let Some(expiration) = ban.expires_at {
+            if now > expiration {
+                sea_orm::ModelTrait::delete(ban, &txn).await?;
+            } else {
+                return Err(AppError::Forbidden(
+                    "You are temporarily banned from this server".into(),
+                ));
+            }
+        } else {
+            return Err(AppError::Forbidden(
+                "You are permanently banned from this server.".into(),
+            ));
+        }
     }
 
     let member_id = Uuid::new_v4();

@@ -1,4 +1,4 @@
-use crate::core::{error::AppError, statements::ScyllaStatements};
+use crate::core::{error::AppError, rtc::WebRtcManager, statements::ScyllaStatements};
 use axum::extract::ws::Message;
 use dashmap::DashMap;
 use shared::data::UserId;
@@ -56,6 +56,7 @@ pub struct AppState {
     pub db: sea_orm::DatabaseConnection,
     pub scylla: Scylla,
     pub redis: Redis,
+    pub rtc: Arc<WebRtcManager>,
     pub active_sessions: DashMap<UserId, Arc<RwLock<HashMap<SessionId, WsSession>>>>,
 }
 
@@ -108,6 +109,8 @@ impl AppState {
         let cache = deadpool_redis::Config::from_url(credentials.redis_cache_url)
             .create_pool(Some(deadpool_redis::Runtime::Tokio1))?;
 
+        let rtc_manager = Arc::new(WebRtcManager::new()?);
+
         Ok(Self {
             s3,
             db,
@@ -121,6 +124,7 @@ impl AppState {
                 messages,
                 cache,
             },
+            rtc: rtc_manager,
             active_sessions: DashMap::new(),
         })
     }

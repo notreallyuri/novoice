@@ -1,6 +1,7 @@
 pub mod auth;
 pub mod category;
-pub mod channels;
+pub mod channel;
+pub mod dms;
 pub mod guild;
 pub mod guild_member;
 pub mod messages;

@@ -201,3 +201,10 @@ impl From<validator::ValidationErrors> for AppError {
         Self::ValidationError(err.to_string())
     }
 }
+
+impl From<webrtc::Error> for AppError {
+    fn from(err: webrtc::Error) -> Self {
+        tracing::error!("WebRTC Engine Error: {}", err);
+        AppError::Internal("A real-time communication error occurred".into())
+    }
+}

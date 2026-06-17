@@ -6,6 +6,7 @@ mod m20260525_162719_create_channels_and_categories;
 mod m20260525_162724_create_invites;
 mod m20260525_215659_create_roles;
 mod m20260531_215949_create_presence_presets;
+mod m20260617_134255_create_dm_channels;
 
 pub struct Migrator;
 
@@ -19,6 +20,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260525_162724_create_invites::Migration),
             Box::new(m20260525_215659_create_roles::Migration),
             Box::new(m20260531_215949_create_presence_presets::Migration),
+            Box::new(m20260617_134255_create_dm_channels::Migration),
         ]
     }
 }

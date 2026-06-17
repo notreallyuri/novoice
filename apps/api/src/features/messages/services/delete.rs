@@ -1,4 +1,6 @@
-use crate::core::{broadcast, error::AppError, state::SharedState};
+use crate::core::{
+    broadcast, error::AppError, state::SharedState, statements::get_bucket_from_uuidv7,
+};
 use sea_orm::EntityTrait;
 use shared::{
     data::{ChannelId, MessageId, UserId},
@@ -17,12 +19,14 @@ pub async fn delete(
         .await?
         .ok_or(AppError::NotFound)?;
 
+    let bucket = get_bucket_from_uuidv7(message_id.0);
+
     let res = state
         .scylla
         .session
         .execute_unpaged(
             &state.scylla.statements.select_message_author,
-            (channel_id.0, message_id.0),
+            (channel_id.0, bucket, message_id.0),
         )
         .await?
         .into_rows_result()?;
@@ -40,7 +44,7 @@ pub async fn delete(
         .session
         .execute_unpaged(
             &state.scylla.statements.soft_delete_message,
-            (channel_id.0, message_id.0),
+            (channel_id.0, bucket, message_id.0),
         )
         .await?;
 

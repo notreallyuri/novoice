@@ -55,8 +55,20 @@ impl FromDomain<ChannelModel> for Channel {
                 bitrate: model.bitrate.unwrap_or(64_000),
                 participants: vec![],
             }),
-            DbChannelKind::Docs => Channel::Docs(DocsChannel { id: channel_id }),
-            DbChannelKind::Canvas => Channel::Canvas(CanvasChannel { id: channel_id }),
+            DbChannelKind::Docs => Channel::Docs(DocsChannel {
+                id: channel_id,
+                guild_id,
+                category_id,
+                name: model.name,
+                position: model.position,
+            }),
+            DbChannelKind::Canvas => Channel::Canvas(CanvasChannel {
+                id: channel_id,
+                guild_id,
+                category_id,
+                name: model.name,
+                position: model.position,
+            }),
         }
     }
 }

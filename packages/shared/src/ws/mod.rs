@@ -1,4 +1,4 @@
-use crate::data::{ChannelId, user::UserPresence};
+use crate::data::user::UserPresence;
 use serde::{Deserialize, Serialize};
 
 pub mod guild;
@@ -10,7 +10,6 @@ pub mod user;
 #[serde(tag = "type", content = "data")]
 pub enum ClientMessage {
     Identify { token: String },
-    JoinRoom { channel_id: ChannelId },
     Chat(message::ChatClientEvents),
     Rtc(rtc::RtcClientEvents),
     SetPresence { presence: UserPresence },

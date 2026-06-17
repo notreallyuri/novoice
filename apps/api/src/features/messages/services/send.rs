@@ -1,4 +1,4 @@
-use crate::core::{broadcast, error::AppError, state::SharedState};
+use crate::core::{broadcast, error::AppError, state::SharedState, statements::current_bucket};
 use scylla::value::CqlTimestamp;
 use sea_orm::EntityTrait;
 use shared::{
@@ -30,8 +30,9 @@ pub async fn send(
             &state.scylla.statements.insert_message,
             (
                 channel_id.0,
-                CqlTimestamp(created_at_ms),
+                current_bucket(),
                 message_id,
+                CqlTimestamp(created_at_ms),
                 author_id.0,
                 payload.content.clone(),
                 false,
@@ -42,7 +43,7 @@ pub async fn send(
 
     let message = Message {
         id: MessageId(message_id),
-        channel_id: channel_id.clone(),
+        channel_id,
         author_id,
         content: payload.content,
         created_at: now,

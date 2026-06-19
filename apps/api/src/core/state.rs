@@ -95,6 +95,7 @@ impl AppState {
         let db = db_res.map_err(|_| AppError::Internal("Database connection timeout".into()))??;
         let scylla =
             scylla_res.map_err(|_| AppError::Internal("Scylla connection timeout".into()))??;
+        crate::core::statements::initialize_schema(&scylla).await?;
         let statements = ScyllaStatements::prepare(&scylla).await?;
 
         let presence = deadpool_redis::Config::from_url(credentials.redis_presence_url)

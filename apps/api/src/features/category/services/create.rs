@@ -1,15 +1,17 @@
+use crate::core::{
+    audit::log_action, broadcast, error::AppError, guards::verify_permission, state::SharedState,
+};
 use entity::category;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QuerySelect, Set};
 use shared::{
     data::{
-        CategoryId, GuildId, UserId, channel::prelude::ChannelCategory, permissions::Permissions,
+        CategoryId, GuildId, UserId, audit_log::AuditActionType, channel::prelude::ChannelCategory,
+        permissions::Permissions,
     },
     dtos::category::CreateCategoryRequest,
     ws::{ServerMessage, guild::GuildServerEvents},
 };
 use uuid::Uuid;
-
-use crate::core::{broadcast, error::AppError, guards::verify_permission, state::SharedState};
 
 pub async fn create(
     state: &SharedState,
@@ -38,6 +40,20 @@ pub async fn create(
     };
 
     new_category.insert(&state.db).await?;
+
+    let _ = log_action(
+        &state.db,
+        guild_id,
+        user_id,
+        AuditActionType::CategoryCreate,
+        Some(category_id),
+        None,
+        Some(serde_json::json!({
+            "name": req.name,
+            "position": next_position,
+        })),
+    )
+    .await;
 
     let category_dto = ChannelCategory {
         id: CategoryId(category_id),

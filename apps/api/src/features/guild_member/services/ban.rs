@@ -1,5 +1,5 @@
 use crate::core::{
-    broadcast, cache::guild_members::cache_remove_member, error::AppError,
+    audit::log_action, broadcast, cache::guild_members::cache_remove_member, error::AppError,
     guards::verify_permission, state::SharedState,
 };
 use entity::{guild, guild_ban, guild_member};
@@ -7,7 +7,7 @@ use sea_orm::{
     ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, ModelTrait, QueryFilter,
 };
 use shared::{
-    data::{GuildId, UserId, permissions::Permissions},
+    data::{GuildId, UserId, audit_log::AuditActionType, permissions::Permissions},
     dtos::guild_member::BanMemberRequest,
     ws::{ServerMessage, guild::GuildServerEvents},
 };
@@ -42,7 +42,7 @@ pub async fn ban(
         let new_ban = guild_ban::ActiveModel {
             guild_id: Set(guild_id.0),
             user_id: Set(target_id.0),
-            reason: Set(req.reason),
+            reason: Set(req.reason.clone()),
             expires_at: Set(req.expires_at.map(|dt| dt.into())),
             banned_by: Set(target_id.0),
             created_at: Set(now.into()),
@@ -59,6 +59,17 @@ pub async fn ban(
     if let Some(m) = member {
         m.delete(&state.db).await?;
         cache_remove_member(state, guild_id, target_id).await;
+
+        let _ = log_action(
+            &state.db,
+            guild_id,
+            user_id,
+            AuditActionType::MemberBanAdd,
+            Some(target_id.0),
+            req.reason,
+            None,
+        )
+        .await;
 
         let event = ServerMessage::Guild(GuildServerEvents::MemberLeft {
             guild_id,

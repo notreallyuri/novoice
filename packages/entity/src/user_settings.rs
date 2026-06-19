@@ -56,9 +56,9 @@ pub enum DbThemeColor {
     #[sea_orm(num_value = 0)]
     Default,
     #[sea_orm(num_value = 1)]
-    Strawberry,
+    Havoc,
     #[sea_orm(num_value = 2)]
-    Blueberry,
+    Void,
 }
 
 #[derive(Clone, Debug, DeriveEntityModel, Serialize, Deserialize)]

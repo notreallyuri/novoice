@@ -1,11 +1,12 @@
+use crate::core::{
+    audit::log_action, broadcast, error::AppError, guards::verify_permission, state::SharedState,
+};
 use entity::category;
 use sea_orm::{EntityTrait, ModelTrait};
 use shared::{
-    data::{CategoryId, GuildId, UserId, permissions::Permissions},
+    data::{CategoryId, GuildId, UserId, audit_log::AuditActionType, permissions::Permissions},
     ws::{ServerMessage, guild::GuildServerEvents},
 };
-
-use crate::core::{broadcast, error::AppError, guards::verify_permission, state::SharedState};
 
 pub async fn delete(
     state: &SharedState,
@@ -20,6 +21,8 @@ pub async fn delete(
         .await?
         .ok_or(AppError::NotFound)?;
 
+    let target_name = target_category.name.clone();
+
     if target_category.guild_id != guild_id.0 {
         return Err(AppError::Forbidden(
             "Category does not belong to this guild".into(),
@@ -27,6 +30,19 @@ pub async fn delete(
     }
 
     target_category.delete(&state.db).await?;
+
+    let _ = log_action(
+        &state.db,
+        guild_id,
+        user_id,
+        AuditActionType::CategoryDelete,
+        Some(category_id.0),
+        None,
+        Some(serde_json::json!({
+            "name": target_name,
+        })),
+    )
+    .await;
 
     let event = ServerMessage::Guild(GuildServerEvents::CategoryDeleted {
         guild_id,

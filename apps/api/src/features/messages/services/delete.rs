@@ -1,9 +1,10 @@
 use crate::core::{
-    broadcast, error::AppError, state::SharedState, statements::get_bucket_from_uuidv7,
+    audit::log_action, broadcast, error::AppError, state::SharedState,
+    statements::get_bucket_from_uuidv7,
 };
 use sea_orm::EntityTrait;
 use shared::{
-    data::{ChannelId, MessageId, UserId},
+    data::{ChannelId, MessageId, UserId, audit_log::AuditActionType},
     ws::{ServerMessage, message::ChatServerEvents},
 };
 use uuid::Uuid;
@@ -12,9 +13,9 @@ pub async fn delete(
     state: &SharedState,
     channel_id: ChannelId,
     message_id: MessageId,
-    author_id: UserId,
+    user_id: UserId,
 ) -> Result<(), AppError> {
-    entity::channel::Entity::find_by_id(channel_id.0)
+    let channel = entity::channel::Entity::find_by_id(channel_id.0)
         .one(&state.db)
         .await?
         .ok_or(AppError::NotFound)?;
@@ -33,7 +34,7 @@ pub async fn delete(
 
     let stored_author = res.rows::<(Uuid,)>()?.next().ok_or(AppError::NotFound)??.0;
 
-    if stored_author != author_id.0 {
+    if stored_author != user_id.0 {
         return Err(AppError::Forbidden(
             "Você não tem permissão para deletar esta mensagem".into(),
         ));
@@ -47,6 +48,22 @@ pub async fn delete(
             (channel_id.0, bucket, message_id.0),
         )
         .await?;
+
+    let guild_id = shared::data::GuildId(channel.guild_id);
+
+    let _ = log_action(
+        &state.db,
+        guild_id,
+        user_id,
+        AuditActionType::MessageDelete,
+        Some(stored_author),
+        None,
+        Some(serde_json::json!({
+            "channel_id": channel_id.0,
+            "message_id": message_id.0
+        })),
+    )
+    .await;
 
     let payload = ServerMessage::Chat(ChatServerEvents::Deleted {
         channel_id,

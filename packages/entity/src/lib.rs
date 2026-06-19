@@ -1,3 +1,4 @@
+pub mod audit_log;
 pub mod category;
 pub mod category_override;
 pub mod channel;

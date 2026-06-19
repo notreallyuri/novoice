@@ -1,7 +1,9 @@
-use crate::core::{error::AppError, guards::verify_permission, state::SharedState};
+use crate::core::{
+    audit::log_action, error::AppError, guards::verify_permission, state::SharedState,
+};
 use entity::guild_ban;
 use sea_orm::{ColumnTrait, EntityTrait, ModelTrait, QueryFilter};
-use shared::data::{GuildId, UserId, permissions::Permissions};
+use shared::data::{GuildId, UserId, audit_log::AuditActionType, permissions::Permissions};
 
 pub async fn unban(
     state: &SharedState,
@@ -19,6 +21,17 @@ pub async fn unban(
 
     if let Some(b) = ban_record {
         b.delete(&state.db).await?;
+
+        let _ = log_action(
+            &state.db,
+            guild_id,
+            user_id,
+            AuditActionType::MemberBanRemove,
+            Some(target_id.0),
+            None,
+            None,
+        )
+        .await;
     }
 
     Ok(())

@@ -16,8 +16,8 @@ impl FromDomain<DbThemeColor> for ThemeColor {
     fn from_domain(value: DbThemeColor) -> Self {
         match value {
             DbThemeColor::Default => ThemeColor::Default,
-            DbThemeColor::Strawberry => ThemeColor::Strawberry,
-            DbThemeColor::Blueberry => ThemeColor::Blueberry,
+            DbThemeColor::Havoc => ThemeColor::Havoc,
+            DbThemeColor::Void => ThemeColor::Void,
         }
     }
 }

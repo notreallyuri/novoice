@@ -31,7 +31,6 @@ services:
       - "9042:9042"
     volumes:
       - scylla_data:/var/lib/scylla
-      - ./db/scylla/init.cql:/init.cql
     command: --developer-mode=1 --smp=1 --memory=1024M
     healthcheck:
       test: ["CMD-SHELL", "nodetool status | grep UN"]

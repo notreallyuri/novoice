@@ -1,11 +1,11 @@
 use crate::core::{
-    broadcast, cache::guild_members::cache_remove_member, error::AppError,
+    audit::log_action, broadcast, cache::guild_members::cache_remove_member, error::AppError,
     guards::verify_permission, state::SharedState,
 };
 use entity::{guild, guild_member};
 use sea_orm::{ColumnTrait, EntityTrait, ModelTrait, QueryFilter};
 use shared::{
-    data::{GuildId, UserId, permissions::Permissions},
+    data::{GuildId, UserId, audit_log::AuditActionType, permissions::Permissions},
     ws::{ServerMessage, guild::GuildServerEvents},
 };
 
@@ -35,6 +35,17 @@ pub async fn kick(
 
     member.delete(&state.db).await?;
     cache_remove_member(state, guild_id, user_id).await;
+
+    let _ = log_action(
+        &state.db,
+        guild_id,
+        user_id,
+        AuditActionType::MemberKick,
+        Some(target_id.0),
+        None,
+        None,
+    )
+    .await;
 
     let event = ServerMessage::Guild(GuildServerEvents::MemberLeft {
         guild_id,

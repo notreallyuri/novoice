@@ -1,3 +1,4 @@
+pub mod audit;
 pub mod broadcast;
 pub mod cache;
 pub mod crypto;

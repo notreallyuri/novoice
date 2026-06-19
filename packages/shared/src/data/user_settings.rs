@@ -34,8 +34,8 @@ pub enum ThemeDarkMode {
 pub enum ThemeColor {
     #[default]
     Default,
-    Strawberry,
-    Blueberry,
+    Havoc,
+    Void,
 }
 
 #[derive(PartialEq, Serialize, Deserialize, Clone, Debug)]

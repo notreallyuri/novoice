@@ -5,6 +5,7 @@ members = [
   "packages/shared",
   "packages/migration",
   "apps/api",
+  "apps/client/src-tauri",
 ]
 
 [workspace.dependencies]

@@ -1,11 +1,13 @@
 use entity::channel;
 use sea_orm::{EntityTrait, ModelTrait};
 use shared::{
-    data::{ChannelId, GuildId, UserId, permissions::Permissions},
+    data::{ChannelId, GuildId, UserId, audit_log::AuditActionType, permissions::Permissions},
     ws::{ServerMessage, guild::GuildServerEvents},
 };
 
-use crate::core::{broadcast, error::AppError, guards::verify_permission, state::SharedState};
+use crate::core::{
+    audit::log_action, broadcast, error::AppError, guards::verify_permission, state::SharedState,
+};
 
 pub async fn delete(
     state: &SharedState,
@@ -20,6 +22,8 @@ pub async fn delete(
         .await?
         .ok_or(AppError::NotFound)?;
 
+    let target_name = target_channel.name.clone();
+
     if target_channel.guild_id != guild_id.0 {
         return Err(AppError::Forbidden(
             "Channel does not belong to this guild".into(),
@@ -27,6 +31,19 @@ pub async fn delete(
     }
 
     target_channel.delete(&state.db).await?;
+
+    let _ = log_action(
+        &state.db,
+        guild_id,
+        user_id,
+        AuditActionType::ChannelDelete,
+        Some(channel_id.0),
+        None,
+        Some(serde_json::json!({
+            "name": target_name
+        })),
+    )
+    .await;
 
     let event = ServerMessage::Guild(GuildServerEvents::ChannelDeleted {
         guild_id,

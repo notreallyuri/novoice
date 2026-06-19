@@ -1,9 +1,12 @@
-use crate::core::{broadcast, error::AppError, guards::verify_permission, state::SharedState};
+use crate::core::{
+    audit::log_action, broadcast, error::AppError, guards::verify_permission, state::SharedState,
+};
 use entity::channel::{self, DbChannelKind, DbChannelMode};
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QuerySelect, Set};
 use shared::{
     data::{
         ChannelId, GuildId, UserId,
+        audit_log::AuditActionType,
         channel::{
             Channel,
             prelude::{CanvasChannel, ChannelMode, DocsChannel, TextChannel, VoiceChannel},
@@ -60,6 +63,20 @@ pub async fn create(
     };
 
     new_channel.insert(&state.db).await?;
+
+    let _ = log_action(
+        &state.db,
+        guild_id,
+        user_id,
+        AuditActionType::ChannelCreate,
+        Some(channel_id),
+        None,
+        Some(serde_json::json!({
+            "name": req.name,
+            "kind": req.kind,
+        })),
+    )
+    .await;
 
     let channel_dto = match req.kind {
         CreateChannelKind::Text => Channel::Text(TextChannel {

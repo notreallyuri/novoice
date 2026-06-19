@@ -7,6 +7,7 @@ mod m20260525_162724_create_invites;
 mod m20260525_215659_create_roles;
 mod m20260531_215949_create_presence_presets;
 mod m20260617_134255_create_dm_channels;
+mod m20260617_172817_create_audit_logs;
 
 pub struct Migrator;
 
@@ -21,6 +22,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260525_215659_create_roles::Migration),
             Box::new(m20260531_215949_create_presence_presets::Migration),
             Box::new(m20260617_134255_create_dm_channels::Migration),
+            Box::new(m20260617_172817_create_audit_logs::Migration),
         ]
     }
 }

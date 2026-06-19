@@ -72,7 +72,7 @@ interacting with others and joining servers.*
 
 *Advanced guild management capabilities.*
 
-- [ ] Create an `audit_logs` table in PostgreSQL to track administrative actions.
+- [x] Create an `audit_logs` table in PostgreSQL to track administrative actions.
 - [ ] Implement middleware/hooks on destructive endpoints
 (Kick, Ban, Delete Channel) to write to the audit log.
 - [ ] Build the Webhook execution engine for external integrations.

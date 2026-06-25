@@ -76,10 +76,62 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
+        manager
+            .create_table(
+                Table::create()
+                    .table(GuildBans::Table)
+                    .col(ColumnDef::new(GuildBans::GuildId).uuid().not_null())
+                    .col(ColumnDef::new(GuildBans::UserId).uuid().not_null())
+                    .col(ColumnDef::new(GuildBans::Reason).string().null())
+                    .col(ColumnDef::new(GuildBans::BannedBy).uuid().not_null())
+                    .col(
+                        ColumnDef::new(GuildBans::ExpiresAt)
+                            .timestamp_with_time_zone()
+                            .null(),
+                    )
+                    .col(
+                        ColumnDef::new(GuildBans::CreatedAt)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
+                    .primary_key(
+                        Index::create()
+                            .name("pk_guild_bans")
+                            .col(GuildBans::GuildId)
+                            .col(GuildBans::UserId),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_guild_ban_guild")
+                            .from(GuildBans::Table, GuildBans::GuildId)
+                            .to(Guilds::Table, Guilds::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_guild_ban_user")
+                            .from(GuildBans::Table, GuildBans::UserId)
+                            .to(Alias::new("users"), Alias::new("id"))
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_guild_ban_admin")
+                            .from(GuildBans::Table, GuildBans::BannedBy)
+                            .to(Alias::new("users"), Alias::new("id"))
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
         Ok(())
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .drop_table(Table::drop().table(GuildBans::Table).to_owned())
+            .await?;
         manager
             .drop_table(Table::drop().table(GuildMembers::Table).to_owned())
             .await?;
@@ -112,4 +164,14 @@ enum GuildMembers {
     IdentityBanner,
     IdentityBio,
     JoinedAt,
+}
+#[derive(DeriveIden)]
+enum GuildBans {
+    Table,
+    GuildId,
+    UserId,
+    Reason,
+    BannedBy,
+    ExpiresAt,
+    CreatedAt,
 }

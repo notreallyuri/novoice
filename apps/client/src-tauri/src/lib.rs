@@ -1,103 +1,41 @@
-use crate::state::{AppState, ViewPanel};
-use tauri::{AppHandle, Emitter, Manager};
-use tokio::sync::mpsc;
+use crate::core::state::AppState;
 
-pub mod state;
+pub const WS_URL: &str = "ws://localhost:3333/ws";
+pub const API_URL: &str = "http://localhost:3333/api";
+
+pub mod commands;
+pub mod core;
+pub mod data;
+pub mod error;
 pub mod ws;
-
-#[tauri::command]
-async fn send_chat_message(
-    content: String,
-    state: tauri::State<'_, AppState>,
-) -> Result<(), String> {
-    let sender_lock = state.ws.lock().await;
-
-    if let Some(_sender) = sender_lock.as_ref() {
-        println!("React wants to send: {}", content);
-        Ok(())
-    } else {
-        Err("WebSocket is not connected!".to_string())
-    }
-}
-
-#[tauri::command]
-fn get_active_panels(state: tauri::State<'_, AppState>) -> Result<Vec<ViewPanel>, String> {
-    let panels = state.cache.current_panels.read().unwrap();
-    Ok(panels.clone())
-}
-
-#[tauri::command]
-fn request_initial_panels(state: tauri::State<'_, AppState>, app: AppHandle) -> Result<(), String> {
-    let panels = state.cache.current_panels.read().unwrap();
-    app.emit("panels_updated", panels.clone()).unwrap();
-    Ok(())
-}
-
-#[tauri::command]
-fn open_panel(
-    panel_id: String,
-    target_id: String,
-    title: String,
-    panel_type: String,
-    state: tauri::State<'_, AppState>,
-    app: AppHandle,
-) -> Result<(), String> {
-    let mut panels = state.cache.current_panels.write().unwrap();
-
-    panels.push(ViewPanel {
-        id: panel_id,
-        target_id,
-        title,
-        panel_type,
-    });
-
-    app.emit("panels_updated", panels.clone()).unwrap();
-
-    Ok(())
-}
-
-#[tauri::command]
-fn close_panel(
-    id_to_remove: String,
-    state: tauri::State<'_, AppState>,
-    app: AppHandle,
-) -> Result<(), String> {
-    let mut panels = state.cache.current_panels.write().unwrap();
-    panels.retain(|p| p.id != id_to_remove);
-    app.emit("panels_updated", panels.clone()).unwrap();
-    Ok(())
-}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tracing_subscriber::fmt().init();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        .manage(AppState::new())
+        .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
-            send_chat_message,
-            get_active_panels,
-            close_panel,
-            request_initial_panels,
-            open_panel
+            commands::chat::send_chat_message,
+            commands::workspace::close_space,
+            commands::workspace::open_space,
+            commands::workspace::request_initial_spaces,
+            commands::workspace::set_layout_direction,
+            commands::workspace::split_space,
+            commands::workspace::replace_space,
+            commands::call::start_call,
+            commands::call::close_call,
+            commands::call::toggle_mute,
+            commands::call::toggle_deafen,
+            commands::auth::login,
+            commands::auth::logout,
+            commands::auth::check_auth_status,
+            commands::auth::get_initial_data,
         ])
-        .setup(|app| {
-            let app_handle = app.handle().clone();
-            let state = app.state::<AppState>();
-
-            let (tx, rx) = mpsc::unbounded_channel();
-
-            tauri::async_runtime::block_on(async {
-                *state.ws.lock().await = Some(tx);
-            });
-
-            tauri::async_runtime::spawn(async move {
-                ws::start_ws(app_handle, rx).await;
-            });
-
-            Ok(())
-        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -20,10 +20,21 @@
         "decorations": false
       },
       {
-        "title": "loaderscreen",
-        "width": 600,
-        "height": 400,
+        "title": "Login",
+        "width": 854,
+        "height": 540,
+        "label": "auth",
+        "visible": false,
+        "decorations": false,
+        "center": true,
+        "resizable": false
+      },
+      {
+        "title": "Starting...",
+        "width": 300,
+        "height": 200,
         "label": "loader",
+        "visible": true,
         "decorations": false,
         "center": true,
         "transparent": true,

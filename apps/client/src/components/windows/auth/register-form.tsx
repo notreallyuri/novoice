@@ -7,9 +7,9 @@ import {
   RegisterStepAccount,
   RegisterStepProfile,
 } from "@/types/dtos";
-import { Button } from "../ui/button";
-import { Field, FieldError, FieldGroup, FieldLabel } from "../ui/field";
-import { Input } from "../ui/input";
+import { Button } from "../../ui/button";
+import { Field, FieldError, FieldGroup, FieldLabel } from "../../ui/field";
+import { Input } from "../../ui/input";
 
 export function RegisterForm() {
   const [step, setStep] = useState<"account" | "profile">("account");

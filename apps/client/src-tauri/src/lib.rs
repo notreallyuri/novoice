@@ -1,5 +1,3 @@
-use crate::core::state::AppState;
-
 pub const WS_URL: &str = "ws://localhost:3333/ws";
 pub const API_URL: &str = "http://localhost:3333/api";
 
@@ -18,7 +16,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        .manage(AppState::default())
+        .manage(core::state::AppState::default())
         .invoke_handler(tauri::generate_handler![
             commands::chat::send_chat_message,
             commands::workspace::close_space,
@@ -33,8 +31,8 @@ pub fn run() {
             commands::call::toggle_deafen,
             commands::auth::login,
             commands::auth::logout,
-            commands::auth::check_auth_status,
             commands::auth::get_initial_data,
+            commands::auth::check_auth_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,10 +1,15 @@
 import { useForm } from "@tanstack/react-form";
 import { Eye, EyeClosed } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { LoginRequest } from "@/types/dtos";
-import { Button } from "../ui/button";
-import { Field, FieldError, FieldGroup, FieldLabel } from "../ui/field";
-import { Input } from "../ui/input";
 
 export function LoginForm() {
   const [visible, setVisible] = useState(false);

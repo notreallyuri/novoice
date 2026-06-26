@@ -3,8 +3,10 @@ import ReactDOM from "react-dom/client";
 import "./globals.css";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { MainLayout } from "./components/layout/main-layout";
-import { LoaderScreen } from "./components/loader";
+import { ThemeProvider } from "./components/theme-provider";
 import { TooltipProvider } from "./components/ui/tooltip";
+import { AuthWindow } from "./components/windows/auth";
+import { LoaderWindow } from "./components/windows/loader";
 import { useSpatialNavigation } from "./hooks/use-spatial-navigation";
 import { useAuthStore } from "./store/auth-store";
 import { useCallStore } from "./store/call-store";
@@ -20,6 +22,10 @@ function App() {
   useSpatialNavigation();
 
   useEffect(() => {
+    if (currentWindow.label !== "main") {
+      return;
+    }
+
     let unlistenWorkspace: () => void;
     let unlistenCall: () => void;
     let unlistenAuth: () => void;
@@ -50,7 +56,11 @@ function App() {
   }, [setupWorkspaceListeners, setupCallListeners, setupAuthListeners]);
 
   if (currentWindow.label === "loader") {
-    return <LoaderScreen />;
+    return <LoaderWindow />;
+  }
+
+  if (currentWindow.label === "auth") {
+    return <AuthWindow />;
   }
 
   return (
@@ -62,6 +72,8 @@ function App() {
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <App />
+    <ThemeProvider defaultColor="Default" defaultTheme="System">
+      <App />
+    </ThemeProvider>
   </React.StrictMode>
 );

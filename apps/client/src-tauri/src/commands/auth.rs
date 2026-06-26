@@ -1,12 +1,10 @@
 use crate::{core::state::SharedState, error::AppError};
-use shared::{
-    dtos::{
-        auth::{AuthResponse, LoginRequest},
-        user::GetMeResponse,
-    },
-    ws::ClientMessage,
+use shared::dtos::{
+    auth::{AuthResponse, LoginRequest},
+    user::GetMeResponse,
 };
-use tauri::AppHandle;
+use shared::ws::ClientMessage;
+use tauri::{AppHandle, Manager};
 use tauri_plugin_store::StoreExt;
 
 #[tauri::command]
@@ -33,7 +31,9 @@ pub async fn login(
     store.save()?;
 
     state.network.disconnect_ws().await;
-    crate::core::loader::close_loader(app).await?;
+    state.network.connect_ws(app.clone()).await;
+
+    crate::core::loader::transition_auth_to_main(app).await?;
 
     Ok(())
 }
@@ -48,39 +48,16 @@ pub async fn logout(state: SharedState<'_>, app: AppHandle) -> Result<(), AppErr
     store.save()?;
 
     state.network.disconnect_ws().await;
-    crate::core::loader::open_loader(app).await?;
+
+    if let Some(main_window) = app.get_webview_window("main") {
+        main_window.hide()?;
+    }
+    if let Some(auth_window) = app.get_webview_window("auth") {
+        auth_window.show()?;
+        auth_window.set_focus()?;
+    }
 
     Ok(())
-}
-
-#[tauri::command]
-pub async fn check_auth_status(
-    state: SharedState<'_>,
-    app_handle: tauri::AppHandle,
-) -> Result<bool, AppError> {
-    let stored = app_handle.store("auth.json").ok().and_then(|store| {
-        let token = store.get("token")?.as_str().map(String::from)?;
-        let user_id = store
-            .get("user_id")
-            .and_then(|v| v.as_str().map(String::from));
-        Some((token, user_id))
-    });
-
-    if let Some((token, user_id)) = stored {
-        *state.auth.token.write().await = Some(token.clone());
-        *state.auth.user_id.write().await = user_id;
-
-        state.network.connect_ws(app_handle.clone()).await;
-        let _ = state
-            .network
-            .ws_send(ClientMessage::Identify { token })
-            .await;
-
-        let _ = crate::core::loader::close_loader(app_handle).await;
-        Ok(true)
-    } else {
-        Ok(false)
-    }
 }
 
 #[tauri::command]
@@ -104,4 +81,34 @@ pub async fn get_initial_data(state: SharedState<'_>) -> Result<GetMeResponse, A
         .await?;
 
     Ok(res)
+}
+
+#[tauri::command]
+pub async fn check_auth_status(state: SharedState<'_>, app: AppHandle) -> Result<(), AppError> {
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
+    let stored = app.store("auth.json").ok().and_then(|store| {
+        let token = store.get("token")?.as_str().map(String::from)?;
+        let user_id = store
+            .get("user_id")
+            .and_then(|v| v.as_str().map(String::from));
+        Some((token, user_id))
+    });
+
+    if let Some((token, user_id)) = stored {
+        *state.auth.token.write().await = Some(token.clone());
+        *state.auth.user_id.write().await = user_id;
+
+        state.network.connect_ws(app.clone()).await;
+        let _ = state
+            .network
+            .ws_send(ClientMessage::Identify { token })
+            .await;
+
+        crate::core::loader::transition_loader_to_main(app).await?;
+    } else {
+        crate::core::loader::transition_loader_to_auth(app).await?;
+    }
+
+    Ok(())
 }

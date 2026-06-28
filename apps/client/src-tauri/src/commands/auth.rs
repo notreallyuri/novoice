@@ -4,7 +4,7 @@ use shared::dtos::{
     user::GetMeResponse,
 };
 use shared::ws::ClientMessage;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_store::StoreExt;
 
 #[tauri::command]
@@ -61,7 +61,10 @@ pub async fn logout(state: SharedState<'_>, app: AppHandle) -> Result<(), AppErr
 }
 
 #[tauri::command]
-pub async fn get_initial_data(state: SharedState<'_>) -> Result<GetMeResponse, AppError> {
+pub async fn get_initial_data(
+    state: SharedState<'_>,
+    app: AppHandle,
+) -> Result<GetMeResponse, AppError> {
     let token = state
         .auth
         .token
@@ -79,6 +82,10 @@ pub async fn get_initial_data(state: SharedState<'_>) -> Result<GetMeResponse, A
         .await?
         .json::<GetMeResponse>()
         .await?;
+
+    *state.cache.current_user.write().await = Some(res.user.clone());
+
+    let _ = app.emit("ui_settings", &res.user.settings.ui);
 
     Ok(res)
 }

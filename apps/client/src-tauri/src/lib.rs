@@ -7,6 +7,8 @@ pub mod data;
 pub mod error;
 pub mod ws;
 
+use commands::*;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tracing_subscriber::fmt().init();
@@ -18,21 +20,20 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(core::state::AppState::default())
         .invoke_handler(tauri::generate_handler![
-            commands::chat::send_chat_message,
-            commands::workspace::close_space,
-            commands::workspace::open_space,
-            commands::workspace::request_initial_spaces,
-            commands::workspace::set_layout_direction,
-            commands::workspace::split_space,
-            commands::workspace::replace_space,
-            commands::call::start_call,
-            commands::call::close_call,
-            commands::call::toggle_mute,
-            commands::call::toggle_deafen,
-            commands::auth::login,
-            commands::auth::logout,
-            commands::auth::get_initial_data,
-            commands::auth::check_auth_status
+            workspace::close_space,
+            workspace::open_space,
+            workspace::request_initial_spaces,
+            workspace::set_layout_direction,
+            workspace::split_space,
+            workspace::replace_space,
+            call::start_call,
+            call::close_call,
+            call::toggle_mute,
+            call::toggle_deafen,
+            auth::login,
+            auth::logout,
+            auth::get_initial_data,
+            chat::send_chat_message,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

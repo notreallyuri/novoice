@@ -56,7 +56,11 @@ export function DialogCropper({
                   Cancel
                 </Button>
                 <ImageCropApply
-                  render={<Button size="sm">Apply Crop</Button>}
+                  render={
+                    <Button size="sm" variant="ghost">
+                      Apply Crop
+                    </Button>
+                  }
                 />
               </div>
             </ImageCrop>

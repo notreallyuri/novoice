@@ -1,7 +1,14 @@
 import { useForm } from "@tanstack/react-form";
 import { invoke } from "@tauri-apps/api/core";
-import { Eye, EyeClosed, Loader2 } from "lucide-react";
+import { Camera, Eye, EyeClosed, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { DialogCropper } from "@/components/dialogs/dialog-cropper";
+import type { CropResult } from "@/components/image-cropper";
+import {
+  generateCroppedImage,
+  useImageSelection,
+} from "@/hooks/use-image-selection";
+import { cn } from "@/lib/utils";
 import {
   RegisterRequest,
   RegisterStepAccount,
@@ -14,6 +21,10 @@ import { Input } from "../../ui/input";
 export function RegisterForm() {
   const [step, setStep] = useState<"account" | "profile">("account");
   const [passwordVisible, setPasswordVisible] = useState(false);
+
+  const avatarSelection = useImageSelection("Pick Avatar");
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [avatarCrop, setAvatarCrop] = useState<CropResult | null>(null);
 
   const form = useForm({
     defaultValues: {
@@ -30,8 +41,18 @@ export function RegisterForm() {
     },
     onSubmit: async ({ value }) => {
       try {
-        console.log("Submitting to Rust:", value);
-        await invoke("register_user", { payload: value });
+        const payload = {
+          ...value,
+          profile: {
+            ...value.profile,
+            bio: value.profile.bio?.trim() || null,
+            banner_url: value.profile.banner_url?.trim() || null,
+          },
+        };
+
+        console.log("Submitting:", payload, "Crop:", avatarCrop);
+
+        await invoke("register_user", { payload });
       } catch (err) {
         console.error(err);
       }
@@ -43,9 +64,7 @@ export function RegisterForm() {
       {step === "account" && (
         <form.FormGroup
           name="account"
-          onGroupSubmit={() => {
-            setStep("profile");
-          }}
+          onGroupSubmit={() => setStep("profile")}
           validators={{ onChange: RegisterStepAccount }}
         >
           {(group) => (
@@ -73,7 +92,6 @@ export function RegisterForm() {
                           type="email"
                           value={field.state.value}
                         />
-
                         {isInvalid && (
                           <FieldError errors={field.state.meta.errors} />
                         )}
@@ -152,9 +170,7 @@ export function RegisterForm() {
       {step === "profile" && (
         <form.FormGroup
           name="profile"
-          onGroupSubmit={() => {
-            form.handleSubmit();
-          }}
+          onGroupSubmit={() => form.handleSubmit()}
           validators={{ onChange: RegisterStepProfile }}
         >
           {(group) => (
@@ -167,6 +183,40 @@ export function RegisterForm() {
               }}
             >
               <FieldGroup>
+                <form.Field name="profile.avatar_url">
+                  {(field) => (
+                    <div className="flex flex-col items-center gap-2">
+                      <button
+                        className={cn(
+                          "group relative flex size-20 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-dashed transition-all",
+                          field.state.meta.errors.length > 0
+                            ? "border-destructive bg-destructive/10"
+                            : "border-border bg-muted/50 hover:border-primary/50 hover:bg-muted"
+                        )}
+                        onClick={async () => {
+                          await avatarSelection.handleSelectImage();
+                          setCropperOpen(true);
+                        }}
+                        type="button"
+                      >
+                        {field.state.value ? (
+                          // biome-ignore lint/correctness/useImageSize: "please ignore it..."
+                          <img
+                            alt="Avatar"
+                            className="size-full object-cover"
+                            src={field.state.value}
+                          />
+                        ) : (
+                          <Camera className="size-6 text-muted-foreground transition-colors group-hover:text-foreground" />
+                        )}
+                      </button>
+                      {field.state.meta.errors.length > 0 && (
+                        <FieldError errors={field.state.meta.errors} />
+                      )}
+                    </div>
+                  )}
+                </form.Field>
+
                 <form.Field name="profile.display_name">
                   {(field) => {
                     const isInvalid =
@@ -241,6 +291,30 @@ export function RegisterForm() {
           )}
         </form.FormGroup>
       )}
+
+      <DialogCropper
+        circular={true}
+        isOpen={cropperOpen && !!avatarSelection.previewUrl}
+        onClose={() => {
+          setCropperOpen(false);
+          if (!form.getFieldValue("profile.avatar_url")) {
+            avatarSelection.clearSelection();
+          }
+        }}
+        onSuccess={async (crop) => {
+          setAvatarCrop(crop);
+          setCropperOpen(false);
+          if (avatarSelection.previewUrl) {
+            const croppedUrl = await generateCroppedImage(
+              avatarSelection.previewUrl,
+              crop
+            );
+            form.setFieldValue("profile.avatar_url", croppedUrl);
+          }
+        }}
+        previewUrl={avatarSelection.previewUrl}
+        title="Position your Avatar"
+      />
     </div>
   );
 }

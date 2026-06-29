@@ -197,6 +197,8 @@ export const ImageCropContent = ({
       {...reactCropProps}
     >
       {imgSrc && (
+        // biome-ignore lint/correctness/useImageSize: "does not need it..."
+        // biome-ignore lint/a11y/noNoninteractiveElementInteractions: "does need it..."
         <img
           alt="crop"
           className="size-full"
@@ -223,13 +225,7 @@ export const ImageCropApply = ({
   };
 
   return (
-    <Button
-      onClick={handleClick}
-      render={render}
-      size="icon"
-      variant="ghost"
-      {...props}
-    >
+    <Button onClick={handleClick} render={render} {...props}>
       {children}
     </Button>
   );
@@ -253,13 +249,7 @@ export const ImageCropReset = ({
   };
 
   return (
-    <Button
-      onClick={handleClick}
-      render={render}
-      size="icon"
-      variant="ghost"
-      {...props}
-    >
+    <Button onClick={handleClick} render={render} variant="ghost" {...props}>
       {children ?? <RotateCcwIcon className="size-4" />}
     </Button>
   );

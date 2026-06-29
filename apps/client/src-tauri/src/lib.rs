@@ -26,6 +26,8 @@ pub fn run() {
             workspace::set_layout_direction,
             workspace::split_space,
             workspace::replace_space,
+            settings::get_ui_settings,
+            settings::update_ui_settings,
             call::start_call,
             call::close_call,
             call::toggle_mute,
@@ -33,6 +35,7 @@ pub fn run() {
             auth::login,
             auth::logout,
             auth::get_initial_data,
+            auth::check_auth_status,
             chat::send_chat_message,
         ])
         .run(tauri::generate_context!())

@@ -1,12 +1,13 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { readFile } from "@tauri-apps/plugin-fs";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { CropResult } from "@/components/image-cropper";
 
 // biome-ignore lint/suspicious/useAwait: we need to use an await since image loading ain't instant
 export async function generateCroppedImage(
   imageUrl: string,
-  crop: CropResult
+  crop: CropResult,
+  maxWidth = 800
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const image = new Image();
@@ -18,27 +19,36 @@ export async function generateCroppedImage(
         return reject(new Error("No 2d context"));
       }
 
-      const targetX = crop.x * crop.scaleX;
-      const targetY = crop.y * crop.scaleY;
-      const targetWidth = crop.width * crop.scaleX;
-      const targetHeight = crop.height * crop.scaleY;
+      const sourceX = crop.x * crop.scaleX;
+      const sourceY = crop.y * crop.scaleY;
+      const sourceWidth = crop.width * crop.scaleX;
+      const sourceHeight = crop.height * crop.scaleY;
+
+      let targetWidth = sourceWidth;
+      let targetHeight = sourceHeight;
+
+      if (targetWidth > maxWidth) {
+        const scale = maxWidth / targetWidth;
+        targetWidth = maxWidth;
+        targetHeight *= scale;
+      }
 
       canvas.width = targetWidth;
       canvas.height = targetHeight;
 
       ctx.drawImage(
         image,
-        targetX,
-        targetY,
-        targetWidth,
-        targetHeight,
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight,
         0,
         0,
         targetWidth,
         targetHeight
       );
 
-      resolve(canvas.toDataURL("image/png", 1.0));
+      resolve(canvas.toDataURL("image/webp", 0.8));
     };
     image.onerror = reject;
   });
@@ -48,6 +58,15 @@ export function useImageSelection(title?: string) {
   const [originalPath, setOriginalPath] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSelecting, setIsSelecting] = useState<boolean>(false);
+
+  useEffect(
+    () => () => {
+      if (previewUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    },
+    [previewUrl]
+  );
 
   const handleSelectImage = async () => {
     setIsSelecting(true);

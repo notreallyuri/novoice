@@ -4,6 +4,7 @@ import { Camera, Eye, EyeClosed, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { DialogCropper } from "@/components/dialogs/dialog-cropper";
 import type { CropResult } from "@/components/image-cropper";
+import { Textarea } from "@/components/ui/textarea";
 import {
   generateCroppedImage,
   useImageSelection,
@@ -23,8 +24,13 @@ export function RegisterForm() {
   const [passwordVisible, setPasswordVisible] = useState(false);
 
   const avatarSelection = useImageSelection("Pick Avatar");
-  const [cropperOpen, setCropperOpen] = useState(false);
+  const bannerSelection = useImageSelection("Select a banner");
+
+  const [activeCropper, setActiveCropper] = useState<
+    "avatar" | "banner" | null
+  >(null);
   const [avatarCrop, setAvatarCrop] = useState<CropResult | null>(null);
+  const [bannerCrop, setBannerCrop] = useState<CropResult | null>(null);
 
   const form = useForm({
     defaultValues: {
@@ -45,14 +51,21 @@ export function RegisterForm() {
           ...value,
           profile: {
             ...value.profile,
-            bio: value.profile.bio?.trim() || null,
-            banner_url: value.profile.banner_url?.trim() || null,
+            bio: value.profile.bio ?? null,
+            avatar_url: null,
+            banner_url: null,
           },
         };
 
         console.log("Submitting:", payload, "Crop:", avatarCrop);
 
-        await invoke("register_user", { payload });
+        await invoke("register_user", {
+          payload,
+          avatarPath: avatarSelection.originalPath,
+          avatarCrop,
+          bannerPath: bannerSelection.originalPath,
+          bannerCrop,
+        });
       } catch (err) {
         console.error(err);
       }
@@ -183,39 +196,75 @@ export function RegisterForm() {
               }}
             >
               <FieldGroup>
-                <form.Field name="profile.avatar_url">
-                  {(field) => (
-                    <div className="flex flex-col items-center gap-2">
-                      <button
-                        className={cn(
-                          "group relative flex size-20 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-dashed transition-all",
-                          field.state.meta.errors.length > 0
-                            ? "border-destructive bg-destructive/10"
-                            : "border-border bg-muted/50 hover:border-primary/50 hover:bg-muted"
+                <div className="relative aspect-16/6 w-full">
+                  <form.Field name="profile.banner_url">
+                    {(field) => (
+                      <div className="size-full">
+                        <button
+                          className={cn(
+                            "group size-full cursor-pointer border border-dashed bg-muted/25",
+                            field.state.meta.errors.length > 0
+                              ? ""
+                              : "border-border bg-muted/25 hover:bg-muted"
+                          )}
+                          onClick={async () => {
+                            await bannerSelection.handleSelectImage();
+                            setActiveCropper("banner");
+                          }}
+                          type="button"
+                        >
+                          {field.state.value && (
+                            <>
+                              <div className="pointer-events-none absolute size-full transition-colors group-hover:bg-muted/25" />
+                              {/*biome-ignore lint/correctness/useImageSize: "ignore"*/}
+                              <img
+                                alt="Banner"
+                                className="size-full object-cover"
+                                src={field.state.value}
+                              />
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </form.Field>
+                  <form.Field name="profile.avatar_url">
+                    {(field) => (
+                      <div className="flex flex-col items-center gap-2">
+                        <button
+                          className={cn(
+                            "group absolute bottom-2 left-2 flex size-20 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-dashed transition-all",
+                            field.state.meta.errors.length > 0
+                              ? "border-destructive bg-destructive/10"
+                              : "border-border bg-muted/25 hover:border-primary/50 hover:bg-muted"
+                          )}
+                          onClick={async () => {
+                            await avatarSelection.handleSelectImage();
+                            setActiveCropper("avatar");
+                          }}
+                          type="button"
+                        >
+                          {field.state.value ? (
+                            <>
+                              <div className="pointer-events-none absolute size-full transition-colors group-hover:bg-muted/25" />
+                              {/* biome-ignore lint/correctness/useImageSize: "ignore" */}
+                              <img
+                                alt="Avatar"
+                                className="size-full object-cover"
+                                src={field.state.value}
+                              />
+                            </>
+                          ) : (
+                            <Camera className="size-6 text-muted-foreground transition-colors group-hover:text-foreground" />
+                          )}
+                        </button>
+                        {field.state.meta.errors.length > 0 && (
+                          <FieldError errors={field.state.meta.errors} />
                         )}
-                        onClick={async () => {
-                          await avatarSelection.handleSelectImage();
-                          setCropperOpen(true);
-                        }}
-                        type="button"
-                      >
-                        {field.state.value ? (
-                          // biome-ignore lint/correctness/useImageSize: "please ignore it..."
-                          <img
-                            alt="Avatar"
-                            className="size-full object-cover"
-                            src={field.state.value}
-                          />
-                        ) : (
-                          <Camera className="size-6 text-muted-foreground transition-colors group-hover:text-foreground" />
-                        )}
-                      </button>
-                      {field.state.meta.errors.length > 0 && (
-                        <FieldError errors={field.state.meta.errors} />
-                      )}
-                    </div>
-                  )}
-                </form.Field>
+                      </div>
+                    )}
+                  </form.Field>
+                </div>
 
                 <form.Field name="profile.display_name">
                   {(field) => {
@@ -247,7 +296,7 @@ export function RegisterForm() {
                     return (
                       <Field data-invalid={isInvalid}>
                         <FieldLabel>Bio (Optional)</FieldLabel>
-                        <Input
+                        <Textarea
                           autoComplete="off"
                           onBlur={field.handleBlur}
                           onChange={(e) => field.handleChange(e.target.value)}
@@ -293,27 +342,59 @@ export function RegisterForm() {
       )}
 
       <DialogCropper
-        circular={true}
-        isOpen={cropperOpen && !!avatarSelection.previewUrl}
+        aspect={activeCropper === "avatar" ? 1 : 16 / 6}
+        circular={activeCropper === "avatar"}
+        isOpen={
+          (activeCropper === "avatar" && !!avatarSelection.previewUrl) ||
+          (activeCropper === "banner" && !!bannerSelection.previewUrl)
+        }
         onClose={() => {
-          setCropperOpen(false);
-          if (!form.getFieldValue("profile.avatar_url")) {
+          if (
+            activeCropper === "avatar" &&
+            !form.getFieldValue("profile.avatar_url")
+          ) {
             avatarSelection.clearSelection();
+          } else if (
+            activeCropper === "banner" &&
+            !form.getFieldValue("profile.banner_url")
+          ) {
+            bannerSelection.clearSelection();
           }
+          setActiveCropper(null);
         }}
         onSuccess={async (crop) => {
-          setAvatarCrop(crop);
-          setCropperOpen(false);
-          if (avatarSelection.previewUrl) {
+          const isAvatar = activeCropper === "avatar";
+          const selection = isAvatar ? avatarSelection : bannerSelection;
+          const fieldName = isAvatar
+            ? "profile.avatar_url"
+            : "profile.banner_url";
+
+          if (isAvatar) {
+            setAvatarCrop(crop);
+          } else {
+            setBannerCrop(crop);
+          }
+
+          setActiveCropper(null);
+
+          if (selection.previewUrl) {
             const croppedUrl = await generateCroppedImage(
-              avatarSelection.previewUrl,
+              selection.previewUrl,
               crop
             );
-            form.setFieldValue("profile.avatar_url", croppedUrl);
+            form.setFieldValue(fieldName, croppedUrl);
           }
         }}
-        previewUrl={avatarSelection.previewUrl}
-        title="Position your Avatar"
+        previewUrl={
+          activeCropper === "avatar"
+            ? avatarSelection.previewUrl
+            : bannerSelection.previewUrl
+        }
+        title={
+          activeCropper === "avatar"
+            ? "Position your Avatar"
+            : "Position your Banner"
+        }
       />
     </div>
   );
